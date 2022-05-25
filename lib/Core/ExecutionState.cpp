@@ -29,9 +29,12 @@
 #include <set>
 #include <sstream>
 #include <stdarg.h>
+#include "graphviz.h"
+
 
 using namespace llvm;
 using namespace klee;
+using namespace graphvizpp;
 
 namespace {
 cl::opt<bool> DebugLogStateMerge(
@@ -43,6 +46,18 @@ cl::opt<bool> DebugLogStateMerge(
 /***/
 
 std::uint32_t ExecutionState::nextID = 1;
+
+ //Modify By Jorge Calvo Soria
+ 
+ // I think here should go the maps creation
+
+ std::map<const MemoryObject*, Node*> pointerNodeMap;
+ std::map<Node*,const MemoryObject*> pointerNodeReverseMap;
+// std::map<const MemoryObject*, const MemoryObject*> edgeMap;
+
+ graphvizpp::Graph g(true,false,"g");
+
+ //End of modification by Jorge Calvo Soria
 
 /***/
 
@@ -81,6 +96,9 @@ ExecutionState::ExecutionState(KFunction *kf) :
     forkDisabled(false) {
   pushFrame(nullptr, kf);
   setID();
+  
+  
+
 }
 
 ExecutionState::~ExecutionState() {
@@ -112,8 +130,11 @@ ExecutionState::ExecutionState(const ExecutionState& state):
                              : nullptr),
     coveredNew(state.coveredNew),
     forkDisabled(state.forkDisabled) {
+    //graph history = state.graph
+    //vector of graphs
   for (const auto &cur_mergehandler: openMergeStack)
     cur_mergehandler->addOpenState(this);
+    
 }
 
 ExecutionState *ExecutionState::branch() {
@@ -141,6 +162,80 @@ void ExecutionState::popFrame() {
 void ExecutionState::addSymbolic(const MemoryObject *mo, const Array *array) {
   symbolics.emplace_back(ref<const MemoryObject>(mo), array);
 }
+//Modify by Jorge Calvo Soria
+void ExecutionState::printAddressSpace(){
+  
+  llvm::errs() << addressSpace.objects << "\n";
+  llvm::errs() << "ID" << "\n";
+  llvm::errs() << "-----" << "\n";
+  
+    MemoryMap mm = addressSpace.objects;
+    size_t sizem = mm.size();
+    
+  MemoryMap::iterator it = mm.begin();
+  MemoryMap::iterator ie = mm.end();
+    if (it!=ie) {
+    llvm::errs() << it->first->id << " ";
+    llvm::errs() << " SIZE:" << it->first->size << " " ;
+    llvm::errs() << " GLOBAL:" << it->first->isGlobal << " " ;
+    llvm::errs() << "ADDRESS:" << it->first->address << "\n";
+    
+    for (++it; it!=ie; ++it)
+    {
+    
+      llvm::errs() << it->first->id << " ";
+      llvm::errs() << " SIZE:" << it->first->size << " " ;
+      llvm::errs() << " GLOBAL:" << it->first->isGlobal << " " ;
+      llvm::errs() << " ADDRESS:" << it->first->address << "\n";
+      
+    }
+    llvm::errs() << " SIZE MemoryMap:" << sizem << " " << "\n" ;
+  }
+}
+//End of modification made by Jorge Calvo Soria
+
+
+//Modify by Jorge Calvo Soria
+
+//Here is going to be the code where the array and the pointer are save in the map
+void ExecutionState::recordMemoryObject(MemoryObject *mo, Node *node)
+{
+  pointerNodeMap.insert(std::pair<MemoryObject*,Node*>(mo,node));
+  pointerNodeReverseMap.insert(std::pair<Node*,MemoryObject*>(node,mo));
+  g.add_node(mo->name);
+}
+
+  std::string ExecutionState::lookUpLocal(const MemoryObject *mo)
+  {
+    Node *p = pointerNodeMap.find(mo)->second;
+    //g.add_node(p->id);
+    return (p->id);
+  }
+
+  std::string ExecutionState::lookUpGlobal(const MemoryObject *global)
+  {
+    Node *gl = pointerNodeMap.find(global)->second;
+    g.add_node(gl->id);
+    return (gl->id);
+    
+  }
+  
+  void ExecutionState::getDirectionName(std::string test_name)
+  {
+    
+    g.getTestName(test_name);
+    g.fileGraph(g);
+
+
+  }
+  void ExecutionState::createEdge(std::string p, std::string a){
+      g.add_edge(p,a);
+
+  }
+
+
+//End of modification made by Jorge Calvo Soria
+
 
 /**/
 

@@ -1,0 +1,3 @@
+KLEE: Using STP solver backend
+KLEE: Run methods
+KLEE: halting execution, dumping remaining states

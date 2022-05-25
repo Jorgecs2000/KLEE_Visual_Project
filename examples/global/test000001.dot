@@ -1,0 +1,10 @@
+digraph{
+	node [ ]
+	edge [ ]
+	d [ ]
+	a [ ]
+	a2 [ ]
+	A12_S6 [ ]
+	a -> d [ ]
+	a2 -> d [ ]
+}

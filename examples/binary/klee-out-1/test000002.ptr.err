@@ -1,0 +1,12 @@
+Error: memory error: out of bound pointer
+File: bin_search1.c
+Line: 35
+assembly.ll line: 200
+State: 1
+Stack: 
+	#000000200 in sorted (=94392330168464, =10) at bin_search1.c:35
+	#100000259 in main () at bin_search1.c:50
+Info: 
+	address: 94392330168468
+	next: object at 94392330166880 of size 13
+		MO24[13] allocated at global:.str.6

@@ -1,0 +1,5 @@
+KLEE: Using STP solver backend
+KLEE: ERROR: bin_search1.c:47: concretized symbolic size
+KLEE: NOTE: now ignoring this error at this location
+KLEE: ERROR: bin_search1.c:35: memory error: out of bound pointer
+KLEE: NOTE: now ignoring this error at this location

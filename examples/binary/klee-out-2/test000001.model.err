@@ -1,0 +1,12 @@
+Error: concretized symbolic size
+File: bin_search1.c
+Line: 47
+assembly.ll line: 251
+State: 2
+Stack: 
+	#000000251 in main () at bin_search1.c:47
+Info: 
+  size expr: (Mul w64 4
+                       (ZExt w64 (ReadLSB w16 0 n)))
+  concretization : 4
+  unbound example: 12

@@ -11,6 +11,8 @@
 #define KLEE_SPECIALFUNCTIONHANDLER_H
 
 #include "klee/Config/config.h"
+#include "/home/jorge/klee/lib/Core/graphviz.h"
+
 
 #include <iterator>
 #include <map>
@@ -71,7 +73,7 @@ namespace klee {
     static int size();
 
 
-
+  
   public:
     SpecialFunctionHandler(Executor &_executor);
 
@@ -87,7 +89,7 @@ namespace klee {
     /// Initialize the internal handler map after the module has been
     /// prepared for execution.
     void bind();
-
+    bool setMalloc();
     bool handle(ExecutionState &state, 
                 llvm::Function *f,
                 KInstruction *target,

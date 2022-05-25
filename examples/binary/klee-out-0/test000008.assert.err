@@ -1,0 +1,7 @@
+Error: ASSERTION FAIL: a[i] != x
+File: bin_search0.c
+Line: 46
+assembly.ll line: 225
+State: 19
+Stack: 
+	#000000225 in main () at bin_search0.c:46

@@ -19,6 +19,7 @@
 #include "klee/Module/KInstIterator.h"
 #include "klee/Solver/Solver.h"
 #include "klee/System/Time.h"
+#include "graphviz.h"
 
 #include <map>
 #include <memory>
@@ -257,6 +258,16 @@ public:
   void popFrame();
 
   void addSymbolic(const MemoryObject *mo, const Array *array);
+  //Modify by Jorge Calvo Soria
+  void printAddressSpace();
+  
+  void recordMemoryObject(MemoryObject *mo, graphvizpp::Node *node);
+
+  std::string lookUpGlobal(const MemoryObject *mo);
+  std::string lookUpLocal(const MemoryObject *mo);
+  void createEdge(std::string p, std::string a);
+  static void getDirectionName(std::string test_name);
+  // End Modification
 
   void addConstraint(ref<Expr> e);
 

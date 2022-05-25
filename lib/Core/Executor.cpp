@@ -24,6 +24,7 @@
 #include "StatsTracker.h"
 #include "TimingSolver.h"
 #include "UserSearcher.h"
+#include "/home/jorge/klee/lib/Core/graphviz.h"
 
 #include "klee/ADT/KTest.h"
 #include "klee/ADT/RNG.h"
@@ -52,6 +53,7 @@
 #include "klee/System/MemoryUsage.h"
 #include "klee/System/Time.h"
 
+#include "llvm/IR/DebugInfo.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/IR/Attributes.h"
@@ -92,9 +94,19 @@ typedef unsigned TypeSize;
 #include <string>
 #include <sys/mman.h>
 #include <vector>
+#include <iostream>
+
 
 using namespace llvm;
 using namespace klee;
+using namespace graphvizpp;
+
+//Modify By Jorge Calvo
+std::map<const MemoryObject*, const MemoryObject*> edgeMap;
+std::map<uint64_t,const klee::MemoryObject*> MOaddMap;
+uint64_t address_load_object;
+int load=0;
+//End of modification
 
 namespace klee {
 cl::OptionCategory DebugCat("Debugging options",
@@ -671,7 +683,6 @@ void Executor::initializeGlobals(ExecutionState &state) {
 
 void Executor::allocateGlobalObjects(ExecutionState &state) {
   Module *m = kmodule->module.get();
-
   if (m->getModuleInlineAsm() != "")
     klee_warning("executable has module level assembly (ignoring)");
   // represent function globals using the address of the actual llvm function
@@ -736,6 +747,7 @@ void Executor::allocateGlobalObjects(ExecutionState &state) {
   for (const GlobalVariable &v : m->globals()) {
     std::size_t globalObjectAlignment = getAllocationAlignment(&v);
     Type *ty = v.getType()->getElementType();
+    
     std::uint64_t size = 0;
     if (ty->isSized())
       size = kmodule->targetData->getTypeStoreSize(ty);
@@ -772,6 +784,31 @@ void Executor::allocateGlobalObjects(ExecutionState &state) {
     MemoryObject *mo = memory->allocate(size, /*isLocal=*/false,
                                         /*isGlobal=*/true, /*allocSite=*/&v,
                                         /*alignment=*/globalObjectAlignment);
+    //Modify By Jorge Calvo Soria
+    if(ty->isPointerTy())
+    {
+      mo->setName(v.getName().str());
+      
+
+    }
+    else
+    {
+         if(ty->isArrayTy())
+          {
+           
+            mo->setName(v.getName().str());
+          }
+          else
+          {
+            mo->setName(v.getName().str());
+          }
+    }
+
+
+
+    Node *node_global = new Node(v.getName().str());
+    state.recordMemoryObject(mo,node_global);
+    //end of modification
     if (!mo)
       klee_error("out of memory");
     globalObjects.emplace(&v, mo);
@@ -3528,6 +3565,7 @@ void Executor::doDumpStates() {
 }
 
 void Executor::run(ExecutionState &initialState) {
+  klee_message("Run methods");
   bindModuleConstants();
 
   // Delay init till now so that ticks don't accrue during optimization and such.
@@ -3559,8 +3597,14 @@ void Executor::run(ExecutionState &initialState) {
       ExecutionState &state = *lastState;
       KInstruction *ki = state.pc;
       stepInstruction(state);
-
+      
+      std::string ch;
+      llvm::raw_string_ostream info(ch);
+      
+      
       executeInstruction(state, ki);
+      
+     
       timers.invoke();
       if (::dumpStates) dumpStates();
       if (::dumpPTree) dumpPTree();
@@ -3608,8 +3652,11 @@ void Executor::run(ExecutionState &initialState) {
     ExecutionState &state = searcher->selectState();
     KInstruction *ki = state.pc;
     stepInstruction(state);
-
+    //llvm::errs() <<"AddressSpace before instruction"<<(*ki->inst)<<"\n";
+    //state.printAddressSpace(); 
     executeInstruction(state, ki);
+    //llvm::errs()<<"AddressSpace after instruction"<<(*ki->inst)<<"\n";
+    //state.printAddressSpace();
     timers.invoke();
     if (::dumpStates) dumpStates();
     if (::dumpPTree) dumpPTree();
@@ -4025,6 +4072,80 @@ void Executor::executeAlloc(ExecutionState &state,
     MemoryObject *mo =
         memory->allocate(CE->getZExtValue(), isLocal, /*isGlobal=*/false,
                          allocSite, allocationAlignment);
+    llvm::errs()<<"Memory Objects Execute Alloc:"<<mo<<"\n";
+    if(specialFunctionHandler->setMalloc())
+    {
+      llvm::errs()<<"Malloc in alloca instructions"<<mo<<"\n";
+    }
+
+    //Modification by Jorge Calvo Soria
+    // I need to know if the alloc instruction it is an array or a pointer and then I introduce the mo inside the map calling to recordLocalArray
+    
+    llvm::Instruction *inst = state.prevPC->inst;
+    llvm::AllocaInst *ai = dyn_cast<llvm::AllocaInst>(inst); //cast for an alloc instruction
+    
+
+    if(ai){
+
+      if(ai->getAllocatedType()->isPointerTy()){ //it is an array so we call recordLocalPointer is store on the map
+        std::string assembly_line_pointer = std::to_string(state.prevPC->info->assemblyLine);
+        std::string source_line_pointer=std::to_string(state.prevPC->info->line);
+        std::string label_pointer("A");
+        label_pointer.append(assembly_line_pointer);
+        label_pointer.append("_S");
+        label_pointer.append(source_line_pointer);
+        llvm::errs()<<"Pointer Name:"<<label_pointer<<"\n";
+
+    		
+    		Node *node2 = new Node(label_pointer);
+        mo->setName(label_pointer);
+    		state.recordMemoryObject(mo,node2);
+    	
+    	}
+      else
+      {
+        if(ai->getAllocatedType()->isArrayTy()){ //it is an array so we call recordLocalArray is store on the map
+        std::string assembly_line_array = std::to_string(state.prevPC->info->assemblyLine);
+        std::string source_line_array=std::to_string(state.prevPC->info->line);
+        //std::string label_array = + assembly_line_array;
+     
+        std::string id_array = std::to_string(mo->id);
+        std::string label_array("A");
+        label_array.append(assembly_line_array);
+        label_array.append("_S");
+        label_array.append(source_line_array);
+
+
+    		Node *node1 = new Node(label_array);
+        mo->setName(label_array);
+    		state.recordMemoryObject(mo,node1);
+    		
+    	
+    	}
+    	else
+      {
+       
+          std::string assembly_line_other_type= std::to_string(state.prevPC->info->assemblyLine);
+          std::string source_line_other_type=std::to_string(state.prevPC->info->line);
+          std::string id_other_type = std::to_string(mo->id);
+          std::string label_other_type("A");
+          label_other_type.append(assembly_line_other_type);
+          label_other_type.append("_S");
+          label_other_type.append(source_line_other_type);
+
+          Node *node1 = new Node(label_other_type);
+          mo->setName(label_other_type);
+          state.recordMemoryObject(mo,node1);
+        
+      }
+
+    }
+    	
+  }
+    
+    //End of modification by Jorge Calvo Soria
+                         
+                         
     if (!mo) {
       bindLocal(target, state, 
                 ConstantExpr::alloc(0, Context::get().getPointerWidth()));
@@ -4221,6 +4342,121 @@ void Executor::executeMemoryOperation(ExecutionState &state,
   if (success) {
     const MemoryObject *mo = op.first;
 
+ //HERE
+      //Modify By Jorge Calvo Soria
+  llvm::Instruction *inst = state.prevPC->inst;
+  
+ 
+    //Load instructions
+  llvm::LoadInst *li = dyn_cast<llvm::LoadInst>(inst);
+  if(li){
+    
+       	//Pointer
+   	Type *t = li->getPointerOperand()->getType();
+   	if(t->isPointerTy())
+   	{
+   	   Type *el = t->getPointerElementType();
+   	   if(el->isPointerTy())
+   	   {
+        llvm::errs()<<"Name Double Pointer::"<<mo->name<<"\n";
+    		uint64_t add_pointer= mo->address;
+        std::string p = state.lookUpLocal(mo);
+
+    		llvm::errs()<<"Load Instruction"<<"\n";
+
+        const MemoryObject *object_pointed = op.first;
+        llvm::errs()<<"Object Pointed add:"<<object_pointed<<"\n";
+        const MemoryObject *object_pointed2 = edgeMap.find(object_pointed)->second;
+        llvm::errs()<<"Object Pointed2name:"<<object_pointed2->name<<"\n";
+        std::string a = state.lookUpLocal(object_pointed2);
+        llvm::errs()<<"Pointed 2 Address:"<<object_pointed2->address<<"\n";
+        load=true;
+        address_load_object=object_pointed2->address;
+        llvm::errs()<<"Address load object"<< address_load_object<<"\n";
+        
+   	  }
+   	
+   	}
+    	
+  }
+  //Store Instruction
+  llvm::StoreInst *si = dyn_cast<llvm::StoreInst>(inst); 
+  if(si){
+    //llvm::Value *v1 = si->getOperand(0);
+    //llvm::errs()<<"Value"<<v1->getName()<<"\n";
+       	//Pointer
+   	Type *t = si->getPointerOperand()->getType();
+   	if(t->isPointerTy())
+   	{
+   	   Type *el = t->getPointerElementType();
+   	   if(el->isPointerTy())
+   	   {
+    		uint64_t add_pointer= mo->address;
+        std::string p = state.lookUpLocal(mo);
+        llvm::errs() <<"Name Object:"<<mo->name<<"\n";
+        llvm::errs()<<"Address:"<<mo<<"\n";
+
+        llvm::Value *v1 = si->getOperand(1);
+        llvm::errs()<<"Value:"<<value<<"\n";
+        llvm::errs()<<"Address:"<<address<<"\n";
+        llvm::errs()<<"MO Address:"<<mo->address<<"\n";
+
+        
+        
+    		//Now I should make a lookup on the map to search its node
+    		//Array
+        
+	   	solver->setTimeout(coreSolverTimeout);
+	   	bool success2;
+	  	if (!state.addressSpace.resolveOne(state, solver, value, op, success2)) {
+	    		address = toConstant(state, value, "resolveOne failure");
+	    		success2 = state.addressSpace.resolveOne(dyn_cast<ConstantExpr>(value), op);
+	  	}
+	  	solver->setTimeout(time::Span());
+      llvm::errs()<<"Success2:"<<success2<<"\n";
+	  if (success2) {
+	    		const MemoryObject *array = op.first;
+	    		uint64_t add_array= array->address;
+          
+          std::string a = state.lookUpLocal(array);
+          edgeMap.insert(std::pair<const klee::MemoryObject*,const klee::MemoryObject*>(mo,array));
+          MOaddMap.insert(std::pair<uint64_t,const klee::MemoryObject*>(mo->address,mo));
+          MOaddMap.insert(std::pair<uint64_t,const klee::MemoryObject*>(array->address,array));
+
+          state.createEdge(p,a);
+          
+	   	}
+      else
+      {
+        
+        if(load)
+        {
+
+          llvm::errs()<<"Address en store:"<< address_load_object<<"\n";
+          const MemoryObject *objectpointed = MOaddMap.find(address_load_object)->second;
+          llvm::errs()<<"ObjectPointed2:"<< objectpointed<<"\n";
+          std::string p2 = state.lookUpLocal(mo);
+          llvm::errs()<<"Pointer2:"<<p2<<"\n";
+          std::string op2= state.lookUpLocal(objectpointed);
+          llvm::errs()<<"Object Pointed 2:"<<op2<<"\n";
+          state.createEdge(p2,op2);
+        }
+        if(specialFunctionHandler->setMalloc())
+        {
+          llvm::errs()<<"Store for malloc"<<"\n";
+        }
+        
+      }
+	
+    }
+   	
+  }
+    	
+ }
+
+  //End of modification by Jorge Calvo Soria
+ 
+ 
     if (MaxSymArraySize && mo->size >= MaxSymArraySize) {
       address = toConstant(state, address, "max-sym-array-size");
     }

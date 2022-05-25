@@ -1,0 +1,30 @@
+version: 1
+creator: klee
+pid: 28921
+cmd: ejem2.bc
+
+
+positions: instr line
+event: Icov : CoveredInstructions
+event: Forks : Forks
+event: Ireal : InstructionRealTimes
+event: Itime : InstructionTimes
+event: I : Instructions
+event: UCdist : MinDistToUncovered
+event: Rtime : ResolveTime
+event: States : States
+event: Iuncov : UncoveredInstructions
+event: Q : Queries
+event: Qiv : QueriesInvalid
+event: Qv : QueriesValid
+event: Qtime : QueryTime
+events: Icov Forks Ireal Itime I UCdist Rtime States Iuncov Q Qiv Qv Qtime 
+ob=assembly.ll
+fl=ejem2.c
+fn=main
+12 6 1 0 0 0 1 0 0 0 0 0 0 0 0 
+13 6 1 0 0 0 1 0 0 0 0 0 0 0 0 
+14 7 1 0 0 0 1 0 0 0 0 0 0 0 0 
+15 8 1 0 0 0 1 0 0 0 0 0 0 0 0 
+16 8 1 0 0 0 1 0 0 0 0 0 0 0 0 
+17 9 1 0 0 0 1 0 0 0 0 0 0 0 0 

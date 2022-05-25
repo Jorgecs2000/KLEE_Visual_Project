@@ -1,0 +1,2 @@
+KLEE: WARNING: undefined reference to function: printf
+KLEE: WARNING ONCE: calling external: printf(94548012157408, (ReadLSB w32 0 x)) at bin_search.c:7 14

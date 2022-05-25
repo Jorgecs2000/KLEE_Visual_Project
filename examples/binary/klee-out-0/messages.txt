@@ -1,0 +1,3 @@
+KLEE: Using STP solver backend
+KLEE: ERROR: bin_search0.c:46: ASSERTION FAIL: a[i] != x
+KLEE: NOTE: now ignoring this error at this location

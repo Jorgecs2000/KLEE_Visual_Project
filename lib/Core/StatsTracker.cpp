@@ -669,6 +669,7 @@ void StatsTracker::writeIStats() {
           }
           of << ii.assemblyLine << " ";
           of << ii.line << " ";
+          
           for (unsigned i=0; i<nStats; i++)
             if (istatsMask.test(i))
               of << sm.getIndexedValue(sm.getStatistic(i), index) << " ";
@@ -684,7 +685,7 @@ void StatsTracker::writeIStats() {
                 CallSiteInfo &csi = fit->second;
                 const FunctionInfo &fii =
                     executor.kmodule->infos->getFunctionInfo(*f);
-
+                  
                 if (fii.file!="" && fii.file!=sourceFile)
                   of << "cfl=" << fii.file << "\n";
                 of << "cfn=" << f->getName().str() << "\n";

@@ -8,7 +8,6 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
-
 #include "klee/ADT/TreeStream.h"
 #include "klee/Config/Version.h"
 #include "klee/Core/Interpreter.h"
@@ -23,6 +22,7 @@
 #include "klee/Support/ModuleUtil.h"
 #include "klee/Support/PrintVersion.h"
 #include "klee/System/Time.h"
+#include "../lib/Core/ExecutionState.h"
 
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/IRBuilder.h"
@@ -64,6 +64,7 @@
 
 using namespace llvm;
 using namespace klee;
+
 
 namespace {
   cl::opt<std::string>
@@ -291,6 +292,7 @@ namespace {
            cl::cat(LinkCat));
 }
 
+
 namespace klee {
 extern cl::opt<std::string> MaxTime;
 class ExecutionState;
@@ -507,13 +509,18 @@ void KleeHandler::processTestCase(const ExecutionState &state,
         assert(o->bytes);
         std::copy(out[i].second.begin(), out[i].second.end(), o->bytes);
       }
-
-      if (!kTest_toFile(&b, getOutputFilename(getTestFilename("ktest", id)).c_str())) {
+      //Modify by Jorge Calvo
+      //ojo cuidado con lo de vitual del std::string
+      std::string test_name = getOutputFilename(getTestFilename("ktest", id));
+      if (!kTest_toFile(&b, test_name.c_str())) {
         klee_warning("unable to write output test case, losing it");
       } else {
+        llvm::errs()<< "NombreTest:"<<test_name<<"\n";
+        ExecutionState::getDirectionName(test_name);
         ++m_numGeneratedTests;
+        llvm::errs()<<"Number of test:"<<m_numGeneratedTests<<"\n";
       }
-
+      
       for (unsigned i=0; i<b.numObjects; i++)
         delete[] b.objects[i].bytes;
       delete[] b.objects;
