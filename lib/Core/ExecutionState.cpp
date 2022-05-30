@@ -53,7 +53,6 @@ std::uint32_t ExecutionState::nextID = 1;
 
  std::map<const MemoryObject*, Node*> pointerNodeMap;
  std::map<Node*,const MemoryObject*> pointerNodeReverseMap;
-// std::map<const MemoryObject*, const MemoryObject*> edgeMap;
 
  graphvizpp::Graph g(true,false,"g");
 
@@ -209,6 +208,7 @@ void ExecutionState::recordMemoryObject(MemoryObject *mo, Node *node)
   {
     Node *p = pointerNodeMap.find(mo)->second;
     //g.add_node(p->id);
+    llvm::errs()<<"Look Up Local:"<< mo << "\n";
     return (p->id);
   }
 

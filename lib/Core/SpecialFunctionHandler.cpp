@@ -431,16 +431,7 @@ void SpecialFunctionHandler::handleMalloc(ExecutionState &state,
                                   std::vector<ref<Expr> > &arguments) {
   // XXX should type check args
   //Modification by Jorge Calvo Soria
-  //Node creation
-  std::string assembly_line_malloc= std::to_string(target->info->assemblyLine);
-  std::string source_line_malloc=std::to_string(target->info->line);
-  std::string label_malloc("A");
-  label_malloc.append(assembly_line_malloc);
-  label_malloc.append("_S");
-  label_malloc.append(source_line_malloc);
-  Node *node1 = new Node(label_malloc);
   mc=true;
-  
   //End modification
   assert(arguments.size()==1 && "invalid number of arguments to malloc");
   executor.executeAlloc(state, arguments[0], false, target);
