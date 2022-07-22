@@ -27,10 +27,10 @@ namespace graphvizpp{
 
     class Edge{
         friend class Graph;
-        std::string from, to;
         std::map<std::string, std::string> attributes;
 
     public:
+        std::string from, to;
         Edge(std::string from, std::string to) :
                 from(std::move(from)), to(std::move(to)) {}
     };
@@ -52,10 +52,11 @@ namespace graphvizpp{
         bool directed;
         bool strict;
         std::string id;
-        std::vector<Node*> nodes;
-        std::vector<Edge*> edges;
+
 
     public:
+        std::vector<Node*> nodes;
+        std::vector<Edge*> edges;
         std::map<std::string, std::string> graph_attributes;
         std::map<std::string, std::string> node_attributes;
         std::map<std::string, std::string> edge_attributes;
@@ -67,14 +68,17 @@ namespace graphvizpp{
 
         Edge* add_edge(std::string from, std::string to);
 
-        std::string to_string();
+        std::stringstream to_string();
 
-        void to_file(const std::string &path);
-        void fileGraph(Graph g);
-        void getTestName(std::string name);
+        void to_file(const std::string &path,Graph g);
+        void setLabel(std::string assembly, std::string source)const;
+        void getNodeLabel(std::string node_name)const;
+        void getEdgeLabel(std::string edge_from, std::string edge_to)const;
+        void finalString(bool final_graph,bool global,Graph g)const;
+        void getInstruction(std::string instruction);
+        void getTestName(std::string name)const;
     };
 
 }
-
 
 #endif

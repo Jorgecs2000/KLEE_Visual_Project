@@ -53,11 +53,22 @@ std::uint32_t ExecutionState::nextID = 1;
 
  std::map<const MemoryObject*, Node*> pointerNodeMap;
  std::map<Node*,const MemoryObject*> pointerNodeReverseMap;
-
- graphvizpp::Graph g(true,false,"g");
+ unsigned int num_test;
+ int repeated;
+ int times_repeated;
+ std::string assembly_line;
+ std::string source_line;
+ std::map<std::string,std::string > nodeassemblyMap;
+ std::map<std::string,std::string > nodesourceMap;
+ std::multimap<std::string,std::string > edgeassemblyMap;
+ std::multimap<std::string,std::string > edgesourceMap;
+ std::map<std::string,bool > isGlobalMap;
+ std::map<unsigned,std::string > assemblyMap;
+ std::vector <std::string> repeated_edge;
+ std::map<std::string,size_t > edgeRepeatedcount;
+ std::map<std::string,size_t > edgeTimeEntered; 
 
  //End of modification by Jorge Calvo Soria
-
 /***/
 
 StackFrame::StackFrame(KInstIterator _caller, KFunction *_kf)
@@ -85,6 +96,7 @@ StackFrame::~StackFrame() {
 /***/
 
 ExecutionState::ExecutionState(KFunction *kf) :
+    g(true,false,"g"),
     pc(kf->instructions),
     prevPC(pc),
     depth(0),
@@ -95,8 +107,6 @@ ExecutionState::ExecutionState(KFunction *kf) :
     forkDisabled(false) {
   pushFrame(nullptr, kf);
   setID();
-  
-  
 
 }
 
@@ -109,6 +119,8 @@ ExecutionState::~ExecutionState() {
 }
 
 ExecutionState::ExecutionState(const ExecutionState& state):
+    g(state.g),
+    vec_graphs(state.vec_graphs),
     pc(state.pc),
     prevPC(state.prevPC),
     stack(state.stack),
@@ -129,8 +141,6 @@ ExecutionState::ExecutionState(const ExecutionState& state):
                              : nullptr),
     coveredNew(state.coveredNew),
     forkDisabled(state.forkDisabled) {
-    //graph history = state.graph
-    //vector of graphs
   for (const auto &cur_mergehandler: openMergeStack)
     cur_mergehandler->addOpenState(this);
     
@@ -195,42 +205,175 @@ void ExecutionState::printAddressSpace(){
 
 
 //Modify by Jorge Calvo Soria
+void ExecutionState::recordLineMap(std::map<unsigned, std::string>lineMap)
+{
+  assemblyMap=lineMap;
 
-//Here is going to be the code where the array and the pointer are save in the map
+}
+
+
 void ExecutionState::recordMemoryObject(MemoryObject *mo, Node *node)
 {
   pointerNodeMap.insert(std::pair<MemoryObject*,Node*>(mo,node));
   pointerNodeReverseMap.insert(std::pair<Node*,MemoryObject*>(node,mo));
   g.add_node(mo->name);
+  vec_graphs.push_back(g);
+  nodeassemblyMap.insert(std::pair<std::string,std::string>(mo->name,std::to_string(prevPC->info->assemblyLine)));
+  nodesourceMap.insert(std::pair<std::string,std::string>(mo->name,std::to_string(prevPC->info->line)));
+  isGlobalMap.insert(std::pair<std::string,bool>(mo->name,false));
+  
 }
 
   std::string ExecutionState::lookUpLocal(const MemoryObject *mo)
   {
     Node *p = pointerNodeMap.find(mo)->second;
-    //g.add_node(p->id);
-    llvm::errs()<<"Look Up Local:"<< mo << "\n";
     return (p->id);
   }
 
-  std::string ExecutionState::lookUpGlobal(const MemoryObject *global)
+  void ExecutionState::recordGlobal(MemoryObject *global,Node *node)
   {
-    Node *gl = pointerNodeMap.find(global)->second;
-    g.add_node(gl->id);
-    return (gl->id);
-    
+    pointerNodeMap.insert(std::pair<MemoryObject*,Node*>(global,node));
+    pointerNodeReverseMap.insert(std::pair<Node*,MemoryObject*>(node,global));
+    g.add_node(global->name);
+    vec_graphs.push_back(g);
+    nodeassemblyMap.insert(std::pair<std::string,std::string>(global->name,std::to_string(prevPC->info->assemblyLine)));
+    nodesourceMap.insert(std::pair<std::string,std::string>(global->name,std::to_string(prevPC->info->line)));
+    isGlobalMap.insert(std::pair<std::string,bool>(global->name,true));
   }
-  
-  void ExecutionState::getDirectionName(std::string test_name)
+  void ExecutionState::getNumberofTest(unsigned int num_test_generated)const
   {
-    
-    g.getTestName(test_name);
-    g.fileGraph(g);
+    num_test=num_test_generated;
 
+  }
+  void ExecutionState::evolutionGraphs(std::string test_name)const
+  {
 
+        std::string final_node;
+        std::string last_node;
+        std::string final_edge_from;
+        std::string final_edge_to;
+        std::string final_edge;
+        std::string last_edge;
+        bool final_global_node;
+        for(size_t i=0;i<vec_graphs.size();i++)
+        {
+          std::string direction = test_name.substr(0, test_name.find_last_of("/")+1);
+          graphvizpp::Graph g_evolution = vec_graphs[i];
+          for(const auto &node : g_evolution.nodes){
+            final_node=node->id;
+          }
+          for(const auto &edge : g_evolution.edges){
+            final_edge_from=edge->from;
+            final_edge_to=edge->to;
+            final_edge=final_edge_from+final_edge_to;
+          }
+          if((final_node!=last_node) || (final_edge.empty()))
+          {
+            assembly_line=nodeassemblyMap.find(final_node)->second;
+            source_line=nodesourceMap.find(final_node)->second;
+            final_global_node=isGlobalMap.find(final_node)->second;
+            g_evolution.getNodeLabel(final_node);
+            last_node=final_node;
+          }
+          else
+          {
+            size_t times_entered;
+            if(edgeassemblyMap.count(final_edge)==1)
+            {
+              assembly_line=edgeassemblyMap.find(final_edge)->second;
+              source_line=edgesourceMap.find(final_edge)->second;
+              g_evolution.getEdgeLabel(final_edge_from,final_edge_to);
+              last_edge=final_edge;
+              edgeTimeEntered.insert(std::pair<std::string,size_t>(final_edge,times_entered));
+              edgeTimeEntered.find(final_edge)->second++;
+            }
+            else
+            { 
+              
+              edgeRepeatedcount.insert(std::pair<std::string,size_t>(final_edge,edgeassemblyMap.count(final_edge)));
+              edgeTimeEntered.insert(std::pair<std::string,size_t>(final_edge,times_entered));
+
+              
+              if(edgeTimeEntered.find(final_edge)->second==0)
+              {
+                
+                auto it = edgeassemblyMap.equal_range(final_edge);
+                auto it2 = edgesourceMap.equal_range(final_edge);
+                auto itr = it.first;
+                auto itr2 = it2.first;
+                assembly_line=edgeassemblyMap.find(itr->first)->second;
+                source_line=edgesourceMap.find(itr2->first)->second;
+                g_evolution.getEdgeLabel(final_edge_from,final_edge_to);
+                edgeTimeEntered.find(final_edge)->second++;
+
+              }
+              else
+              {
+
+                size_t numbertimes = 0;
+                auto it = edgeassemblyMap.equal_range(final_edge);
+                auto it2 = edgesourceMap.equal_range(final_edge);
+                auto itr1 = it.first;
+                auto itr2 = it2.first;
+                std::string final_name;
+                std::string final_assembly;
+                std::string final_source;
+
+               
+                for(auto itr = it.first;numbertimes<=edgeTimeEntered.find(final_edge)->second;++itr)
+                {
+
+                  final_name = itr1->first;
+                  final_assembly = itr1->second;
+                  final_source = itr2->second;
+                  numbertimes++;
+                  itr2++;
+                  itr1++;
+
+                }
+                g_evolution.getEdgeLabel(final_edge_from,final_edge_to);
+                assembly_line=final_assembly;
+                source_line=final_source;
+              }
+            }
+
+          }
+          std::string name_g ;
+         if(i<10)
+         {
+          name_g = "g_0"+std::to_string(i)+"_t_"+std::to_string(num_test);
+         }
+         else
+         {
+          name_g = "g_"+std::to_string(i)+"_t_"+std::to_string(num_test);
+         }
+          direction=direction+name_g;
+          g_evolution.setLabel(assembly_line,source_line);
+          std::string inst_assembly = assemblyMap.find(std::stoul(assembly_line))->second;
+          std::string inst_assembly_2 = inst_assembly.substr(19,inst_assembly.size());
+          g_evolution.getInstruction(inst_assembly_2);
+          g_evolution.getTestName(direction);
+          if(final_global_node)
+          {
+            g_evolution.finalString(false,true,g_evolution);
+            final_global_node=false;
+          }
+          else
+          {
+            g_evolution.finalString(false,false,g_evolution);
+          }
+          
+        }
+        g.setLabel(assembly_line,source_line);
+        g.getTestName(test_name);
+        g.finalString(true,false,g);
   }
   void ExecutionState::createEdge(std::string p, std::string a){
+   
       g.add_edge(p,a);
-
+      vec_graphs.push_back(g);
+      edgeassemblyMap.insert(std::pair<std::string,std::string>(p+a,std::to_string(prevPC->info->assemblyLine)));
+      edgesourceMap.insert(std::pair<std::string,std::string>(p+a,std::to_string(prevPC->info->line)));
   }
 
 

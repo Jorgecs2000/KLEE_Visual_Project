@@ -1,0 +1,7 @@
+digraph{
+	node [ ]
+	edge [ ]
+	G_P_n [ ]
+	A10_S4 [ ]
+	label = "A10_S4: Instruction in Assembly Line 10 Source Line 4	%1 = alloca i32, align 4"	fontsize = "12"
+}

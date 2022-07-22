@@ -1,0 +1,6 @@
+digraph{
+	node [ ]
+	edge [ ]
+	A8_S2 [ ]
+	label = "A8_S2: Instruction in Assembly Line 8 Source Line 2	%1 = alloca i32, align 4"	fontsize = "12"
+}

@@ -106,6 +106,7 @@ std::map<const MemoryObject*, const MemoryObject*> edgeMap;
 std::map<uint64_t,const klee::MemoryObject*> MOaddMap;
 uint64_t address_load_object;
 int load=0;
+int num_str =1;
 //End of modification
 
 namespace klee {
@@ -670,7 +671,6 @@ extern void *__dso_handle __attribute__ ((__weak__));
 void Executor::initializeGlobals(ExecutionState &state) {
   // allocate and initialize globals, done in two passes since we may
   // need address of a global in order to initialize some other one.
-
   // allocate memory objects for all globals
   allocateGlobalObjects(state);
 
@@ -785,29 +785,47 @@ void Executor::allocateGlobalObjects(ExecutionState &state) {
                                         /*isGlobal=*/true, /*allocSite=*/&v,
                                         /*alignment=*/globalObjectAlignment);
     //Modify By Jorge Calvo Soria
-    if(ty->isPointerTy())
+    
+    if((v.getName().str() != ".str"))
     {
-      mo->setName(v.getName().str());
+      if((v.getName().str() != ".str."+std::to_string(num_str)))
+      {
+        if(ty->isPointerTy())
+        {
+        std::string name_g_pointer = "G_P_"+v.getName().str();
+        mo->setName(name_g_pointer);
+        Node *node_global = new Node(name_g_pointer);
+        state.recordGlobal(mo,node_global);
+
+        }
+        else
+        {
+          if(ty->isArrayTy())
+            {
+              std::string name_g_array ="G_A_" + v.getName().str();
+              mo->setName(name_g_array);
+              Node *node_global = new Node(name_g_array);
+              state.recordGlobal(mo,node_global);
+            }
+            else
+            {
+              mo->setName(v.getName().str());
+              Node *node_global = new Node(v.getName().str());
+              state.recordGlobal(mo,node_global);
+            }
+        }
+      }
+      else
+      {
+        num_str++;
+      }
       
 
     }
-    else
-    {
-         if(ty->isArrayTy())
-          {
-           
-            mo->setName(v.getName().str());
-          }
-          else
-          {
-            mo->setName(v.getName().str());
-          }
-    }
+    
 
 
 
-    Node *node_global = new Node(v.getName().str());
-    state.recordMemoryObject(mo,node_global);
     //end of modification
     if (!mo)
       klee_error("out of memory");
@@ -861,7 +879,6 @@ void Executor::initializeGlobalAliases() {
 
 void Executor::initializeGlobalObjects(ExecutionState &state) {
   const Module *m = kmodule->module.get();
-
   // remember constant objects to initialise their counter part for external
   // calls
   std::vector<ObjectState *> constantObjects;
@@ -933,7 +950,6 @@ void Executor::branch(ExecutionState &state,
   TimerStatIncrementer timer(stats::forkTime);
   unsigned N = conditions.size();
   assert(N);
-
   if (!branchingPermitted(state)) {
     unsigned next = theRNG.getInt32() % N;
     for (unsigned i=0; i<N; ++i) {
@@ -2334,6 +2350,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
     // fork states
     std::vector<ExecutionState *> branches;
     branch(state, expressions, branches);
+    
 
     // terminate error state
     if (result) {
@@ -2724,6 +2741,7 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
   case Instruction::ICmp: {
     CmpInst *ci = cast<CmpInst>(i);
     ICmpInst *ii = cast<ICmpInst>(ci);
+    
 
     switch(ii->getPredicate()) {
     case ICmpInst::ICMP_EQ: {
@@ -2900,7 +2918,6 @@ void Executor::executeInstruction(ExecutionState &state, KInstruction *ki) {
 
   case Instruction::BitCast: {
     ref<Expr> result = eval(ki, 0, state).value;
-    llvm::Instruction *inst = state.prevPC->inst;
     bindLocal(ki, state, result);
     break;
   }
@@ -4073,41 +4090,36 @@ void Executor::executeAlloc(ExecutionState &state,
     MemoryObject *mo =
         memory->allocate(CE->getZExtValue(), isLocal, /*isGlobal=*/false,
                          allocSite, allocationAlignment);
-    llvm::errs()<<"Memory Objects Execute Alloc:"<<mo<<"\n";
     //Modification by Jorge Calvo Soria
-    // I need to know if the alloc instruction it is an array or a pointer and then I introduce the mo inside the map calling to recordLocalArray
-    
     llvm::Instruction *inst = state.prevPC->inst;
     llvm::AllocaInst *ai = dyn_cast<llvm::AllocaInst>(inst); //cast for an alloc instruction
-    
 
     if(ai){
 
-      if(ai->getAllocatedType()->isPointerTy()){ //it is an array so we call recordLocalPointer is store on the map
+      if(ai->getAllocatedType()->isPointerTy()){
         std::string assembly_line_pointer = std::to_string(state.prevPC->info->assemblyLine);
         std::string source_line_pointer=std::to_string(state.prevPC->info->line);
-        std::string label_pointer("A");
+        std::string label_pointer("P_A");
         label_pointer.append(assembly_line_pointer);
         label_pointer.append("_S");
         label_pointer.append(source_line_pointer);
-        llvm::errs()<<"Pointer Name:"<<label_pointer<<"\n";
 
     		
     		Node *node2 = new Node(label_pointer);
         mo->setName(label_pointer);
     		state.recordMemoryObject(mo,node2);
         
+        
     	
     	}
       else
       {
-        if(ai->getAllocatedType()->isArrayTy()){ //it is an array so we call recordLocalArray is store on the map
+        if(ai->getAllocatedType()->isArrayTy()){
         std::string assembly_line_array = std::to_string(state.prevPC->info->assemblyLine);
         std::string source_line_array=std::to_string(state.prevPC->info->line);
-        //std::string label_array = + assembly_line_array;
      
         std::string id_array = std::to_string(mo->id);
-        std::string label_array("A");
+        std::string label_array("A_A");
         label_array.append(assembly_line_array);
         label_array.append("_S");
         label_array.append(source_line_array);
@@ -4117,12 +4129,9 @@ void Executor::executeAlloc(ExecutionState &state,
         mo->setName(label_array);
     		state.recordMemoryObject(mo,node1);
         
-    		
-    	
     	}
     	else
       {
-          llvm::errs()<<"Entra aquí INT"<<"\n";
           std::string assembly_line_other_type= std::to_string(state.prevPC->info->assemblyLine);
           std::string source_line_other_type=std::to_string(state.prevPC->info->line);
           std::string id_other_type = std::to_string(mo->id);
@@ -4144,21 +4153,16 @@ void Executor::executeAlloc(ExecutionState &state,
   llvm::CallInst *ci = dyn_cast<llvm::CallInst>(inst); 
   if(ci)
   {
-    llvm::errs()<<"Entra aquí"<<"\n";
-    llvm::errs()<<"Malloc in alloca instructions"<<mo<<"\n";
     std::string assembly_line_malloc= std::to_string(target->info->assemblyLine);
     std::string source_line_malloc=std::to_string(target->info->line);
-    std::string label_malloc("A");
+    std::string label_malloc("M_A");
     label_malloc.append(assembly_line_malloc);
     label_malloc.append("_S");
     label_malloc.append(source_line_malloc);
-    llvm::errs()<<"Malloc Label"<< label_malloc<<"\n";
     Node *node1 = new Node(label_malloc);
     mo->setName(label_malloc);
     state.recordMemoryObject(mo,node1);
   }
-
-    
     //End of modification by Jorge Calvo Soria
                          
                          
@@ -4361,33 +4365,26 @@ void Executor::executeMemoryOperation(ExecutionState &state,
  //HERE
       //Modify By Jorge Calvo Soria
   llvm::Instruction *inst = state.prevPC->inst;
-  
  
     //Load instructions
   llvm::LoadInst *li = dyn_cast<llvm::LoadInst>(inst);
   if(li){    
        	//Pointer
+        
    	Type *t = li->getPointerOperand()->getType();
    	if(t->isPointerTy())
    	{
    	   Type *el = t->getPointerElementType();
    	   if(el->isPointerTy())
    	   {
-        llvm::errs()<<"Name Double Pointer::"<<mo->name<<"\n";
-    		uint64_t add_pointer= mo->address;
+        //This is when a pointer is pointing to another pointer
         std::string p = state.lookUpLocal(mo);
 
-    		llvm::errs()<<"Load Instruction"<<"\n";
-
         const MemoryObject *object_pointed = op.first;
-        llvm::errs()<<"Object Pointed add:"<<object_pointed<<"\n";
         const MemoryObject *object_pointed2 = edgeMap.find(object_pointed)->second;
-        llvm::errs()<<"Object Pointed2name:"<<object_pointed2->name<<"\n";
         std::string a = state.lookUpLocal(object_pointed2);
-        llvm::errs()<<"Pointed 2 Address:"<<object_pointed2->address<<"\n";
         load=true;
         address_load_object=object_pointed2->address;
-        llvm::errs()<<"Address load object"<< address_load_object<<"\n";
         
    	  }
    	
@@ -4397,6 +4394,8 @@ void Executor::executeMemoryOperation(ExecutionState &state,
   //Store Instruction
   llvm::StoreInst *si = dyn_cast<llvm::StoreInst>(inst); 
   if(si){
+    
+    
        	//Pointer
    	Type *t = si->getPointerOperand()->getType();
    	if(t->isPointerTy())
@@ -4405,8 +4404,6 @@ void Executor::executeMemoryOperation(ExecutionState &state,
    	   Type *el = t->getPointerElementType();
    	   if(el->isPointerTy())
    	   {
-    		uint64_t add_pointer= mo->address;
-        llvm::errs()<<"Es un Pointer Store"<<"\n";
         std::string p = state.lookUpLocal(mo);
     		//Now I should make a lookup on the map to search its node
     		//Array
@@ -4421,15 +4418,12 @@ void Executor::executeMemoryOperation(ExecutionState &state,
 	  if (success2) {
       
 	    		const MemoryObject *array = op.first;
-	    		uint64_t add_array= array->address;
-          llvm::errs()<<"Objeto apuntado address:"<< array<<"\n";
-          llvm::errs()<<"Es un objecto apuntado Store"<<"\n";
           std::string a = state.lookUpLocal(array);
           edgeMap.insert(std::pair<const klee::MemoryObject*,const klee::MemoryObject*>(mo,array));
           MOaddMap.insert(std::pair<uint64_t,const klee::MemoryObject*>(mo->address,mo));
           MOaddMap.insert(std::pair<uint64_t,const klee::MemoryObject*>(array->address,array));
-
           state.createEdge(p,a);
+          
           
 	   	}
       else
@@ -4441,10 +4435,10 @@ void Executor::executeMemoryOperation(ExecutionState &state,
           std::string op2= state.lookUpLocal(objectpointed);
           state.createEdge(p2,op2);
         }
-        if(specialFunctionHandler->setMalloc())
+       /* if(specialFunctionHandler->setMalloc())
         {
           llvm::errs()<<"Store for malloc"<<"\n";
-        }
+        }*/
         
       }
 	

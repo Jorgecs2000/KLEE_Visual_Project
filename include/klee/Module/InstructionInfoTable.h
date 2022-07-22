@@ -14,6 +14,7 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
+#include <map>
 
 namespace llvm {
   class Function;
@@ -64,6 +65,7 @@ namespace klee {
   };
 
   class InstructionInfoTable {
+    
     std::unordered_map<const llvm::Instruction *,
                        std::unique_ptr<InstructionInfo>>
         infos;
@@ -73,7 +75,6 @@ namespace klee {
 
   public:
     explicit InstructionInfoTable(const llvm::Module &m);
-
     unsigned getMaxID() const;
     const InstructionInfo &getInfo(const llvm::Instruction &) const;
     const FunctionInfo &getFunctionInfo(const llvm::Function &) const;

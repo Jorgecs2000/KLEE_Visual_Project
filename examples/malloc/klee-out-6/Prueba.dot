@@ -1,0 +1,9 @@
+digraph{
+	node [ ]
+	edge [ ]
+	a [ ]
+	b [ ]
+	a -> b [ ]
+	label = "Gráfico de prueba"
+}
+

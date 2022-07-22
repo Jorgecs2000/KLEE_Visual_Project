@@ -1,14 +1,14 @@
 /home/jorge/buil/bin/klee malloc.bc
-PID: 6422
+PID: 2657
 Using monotonic steady clock with 1/1000000000s resolution
-Started: 2022-05-23 03:55:36
+Started: 2022-07-08 11:35:21
 BEGIN searcher description
 <InterleavedSearcher> containing 2 searchers:
 RandomPathSearcher
 WeightedRandomSearcher::CoveringNew
 </InterleavedSearcher>
 END searcher description
-Finished: 2022-05-23 03:55:36
+Finished: 2022-07-08 11:35:21
 Elapsed: 00:00:00
 KLEE: done: explored paths = 1
 KLEE: done: total queries = 0
@@ -16,7 +16,7 @@ KLEE: done: valid queries = 0
 KLEE: done: invalid queries = 0
 KLEE: done: query cex = 0
 
-KLEE: done: total instructions = 13
+KLEE: done: total instructions = 16
 KLEE: done: completed paths = 1
 KLEE: done: partially completed paths = 0
 KLEE: done: generated tests = 1

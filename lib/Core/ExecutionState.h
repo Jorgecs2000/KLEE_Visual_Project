@@ -156,6 +156,12 @@ private:
 public:
   using stack_ty = std::vector<StackFrame>;
 
+  /// @brief Graph created for each state
+  graphvizpp::Graph g;
+
+  /// @brief Vector of graphs, that stores every updated graph
+  std::vector<graphvizpp::Graph>vec_graphs;
+
   // Execution - Control Flow specific
 
   /// @brief Pointer to instruction to be executed after the current
@@ -260,13 +266,13 @@ public:
   void addSymbolic(const MemoryObject *mo, const Array *array);
   //Modify by Jorge Calvo Soria
   void printAddressSpace();
-  
   void recordMemoryObject(MemoryObject *mo, graphvizpp::Node *node);
-
-  std::string lookUpGlobal(const MemoryObject *mo);
+  static void recordLineMap(std::map<unsigned, std::string>lineMap);
+  void recordGlobal(MemoryObject *mo, graphvizpp::Node *node);
   std::string lookUpLocal(const MemoryObject *mo);
   void createEdge(std::string p, std::string a);
-  static void getDirectionName(std::string test_name);
+  void evolutionGraphs(std::string test_name)const;
+  void getNumberofTest(unsigned int num_test_generated)const;
   // End Modification
 
   void addConstraint(ref<Expr> e);

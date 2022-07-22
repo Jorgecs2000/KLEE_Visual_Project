@@ -101,6 +101,8 @@
         "typeindex": "cpp",
         "valarray": "cpp",
         "span": "cpp",
-        "*.inc": "cpp"
+        "*.inc": "cpp",
+        "format": "cpp",
+        "*.def": "cpp"
     }
 }

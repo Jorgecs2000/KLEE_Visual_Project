@@ -1,0 +1,11 @@
+Error: memory error: out of bound pointer
+File: evolution2.c
+Line: 20
+assembly.ll line: 38
+State: 2
+Stack: 
+	#000000038 in main () at evolution2.c:20
+Info: 
+	address: 94802715484640
+	next: object at 94802715484312 of size 4
+		MO15[4] allocated at main():  %2 = alloca i32, align 4

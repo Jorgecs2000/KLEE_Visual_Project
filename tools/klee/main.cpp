@@ -355,7 +355,6 @@ KleeHandler::KleeHandler(int argc, char **argv)
     : m_interpreter(0), m_pathWriter(0), m_symPathWriter(0),
       m_outputDirectory(), m_numTotalTests(0), m_numGeneratedTests(0),
       m_pathsCompleted(0), m_pathsExplored(0), m_argc(argc), m_argv(argv) {
-
   // create output directory (OutputDir or "klee-out-<i>")
   bool dir_given = OutputDir != "";
   SmallString<128> directory(dir_given ? OutputDir : InputFile);
@@ -510,15 +509,14 @@ void KleeHandler::processTestCase(const ExecutionState &state,
         std::copy(out[i].second.begin(), out[i].second.end(), o->bytes);
       }
       //Modify by Jorge Calvo
-      //ojo cuidado con lo de vitual del std::string
       std::string test_name = getOutputFilename(getTestFilename("ktest", id));
       if (!kTest_toFile(&b, test_name.c_str())) {
         klee_warning("unable to write output test case, losing it");
       } else {
-        llvm::errs()<< "NombreTest:"<<test_name<<"\n";
-        ExecutionState::getDirectionName(test_name);
         ++m_numGeneratedTests;
-        llvm::errs()<<"Number of test:"<<m_numGeneratedTests<<"\n";
+        state.getNumberofTest(m_numGeneratedTests);
+        state.evolutionGraphs(test_name);
+
       }
       
       for (unsigned i=0; i<b.numObjects; i++)
@@ -1577,7 +1575,6 @@ int main(int argc, char **argv, char **envp) {
     *theStatisticManager->getStatisticByName("Instructions");
   uint64_t forks =
     *theStatisticManager->getStatisticByName("Forks");
-
   handler->getInfoStream()
     << "KLEE: done: explored paths = " << 1 + forks << "\n";
 

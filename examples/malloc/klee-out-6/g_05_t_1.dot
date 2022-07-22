@@ -1,0 +1,11 @@
+digraph{
+	node [ ]
+	edge [ ]
+	G_P_n [ ]
+	A10_S4 [ ]
+	P_A11_S4 [ ]
+	A12_S4 [ ]
+	M_A20_S8 [ ]
+	G_P_n -> M_A20_S8 [ ]
+	label = "G_P_n->M_A20_S8: Instruction in Assembly Line 22 Source Line 8	store i32* %8, i32** @n, align 8, !dbg !25"	fontsize = "12"
+}

@@ -26,12 +26,16 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
 
+#include "../lib/Core/ExecutionState.h"
+
 #include <cstdint>
 #include <map>
 #include <string>
 
 using namespace klee;
-
+std::map<unsigned,std::string > lineMap;
+using namespace llvm;
+using namespace std;
 class InstructionToLineAnnotator : public llvm::AssemblyAnnotationWriter {
 public:
   void emitInstructionAnnot(const llvm::Instruction *i,
@@ -50,6 +54,7 @@ public:
 static std::map<uintptr_t, uint64_t>
 buildInstructionToLineMap(const llvm::Module &m) {
 
+
   std::map<uintptr_t, uint64_t> mapping;
   InstructionToLineAnnotator a;
   std::string str;
@@ -59,12 +64,12 @@ buildInstructionToLineMap(const llvm::Module &m) {
   os.flush();
 
   const char *s;
-
+  
   unsigned line = 1;
   for (s=str.c_str(); *s; s++) {
+    
     if (*s != '\n')
       continue;
-
     line++;
     if (s[1] != '%' || s[2] != '%' || s[3] != '%')
       continue;
@@ -78,13 +83,32 @@ buildInstructionToLineMap(const llvm::Module &m) {
     s = end;
   }
 
+  unsigned line_n = 1;
+  std::string line_string;
+  
+  for (s=str.c_str(); *s; s++) {
+    
+    if(*s == '\n')
+    {
+      lineMap.insert(std::pair<unsigned,std::string>(line_n,line_string));
+
+      line_string.clear();
+      
+      line_n++;
+
+    }
+    else
+    {
+      line_string +=*s;
+    }
+  }
+  ExecutionState::recordLineMap(lineMap);
   return mapping;
 }
 
 class DebugInfoExtractor {
   std::vector<std::unique_ptr<std::string>> &internedStrings;
   std::map<uintptr_t, uint64_t> lineTable;
-
   const llvm::Module &module;
 
 public:
@@ -190,6 +214,7 @@ InstructionInfoTable::InstructionInfoTable(const llvm::Module &m) {
 unsigned InstructionInfoTable::getMaxID() const {
   return infos.size() + functionInfos.size();
 }
+
 
 const InstructionInfo &
 InstructionInfoTable::getInfo(const llvm::Instruction &inst) const {

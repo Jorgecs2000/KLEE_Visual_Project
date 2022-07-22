@@ -1,0 +1,10 @@
+digraph{
+	node [ ]
+	edge [ ]
+	G_P_n [ ]
+	A10_S5 [ ]
+	A11_S5 [ ]
+	A18_S8 [ ]
+	G_P_n -> A18_S8 [ ]
+	label = Process
+}

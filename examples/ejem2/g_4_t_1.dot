@@ -1,0 +1,9 @@
+digraph{
+	node [ ]
+	edge [ ]
+	G_A_c [ ]
+	G_P_b [ ]
+	G_P_b2 [ ]
+	A12_S6 [ ]
+	G_P_b -> G_A_c [ ]
+}
